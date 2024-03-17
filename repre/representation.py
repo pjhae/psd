@@ -35,10 +35,11 @@ L = 6
 updates = 0
 for i in range(100000):
     samples = get_minibatch(data, L=L, num_samples=128)
-    total_loss, loss_max, loss_const_1, loss_const_2 = psi.update_parameters(samples, L=L)
+    total_loss, loss_max, loss_min, loss_const_1, loss_const_2 = psi.update_parameters(samples, L=L)
 
     writer.add_scalar('loss/total', total_loss, updates)
     writer.add_scalar('loss/max', loss_max, updates)
+    writer.add_scalar('loss/min', loss_min, updates)
     writer.add_scalar('loss/const_L)', loss_const_1, updates)
     writer.add_scalar('loss/const_1', loss_const_2, updates)
 

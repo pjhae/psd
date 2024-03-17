@@ -75,14 +75,15 @@ class Psi(nn.Module):
         psi_after = self.forward(minibatch_after)
         psi_after_prime = self.forward(minibatch_after_prime)
         
-        loss_max = -torch.norm(psi_after-psi_before, p=2) + torch.norm((psi_after+psi_before)/2, p=2)
-        loss_const_1 = -lambda_value * 10 * torch.min(torch.tensor(epsilon).detach(), L - torch.norm(psi_after-psi_before, p=2))
-        loss_const_2 = -lambda_value * torch.min(torch.tensor(epsilon).detach(), 1 - torch.norm(psi_before_prime-psi_before, p=2))
+        loss_max = -torch.norm(psi_after-psi_before, p=2)
+        loss_min = torch.norm((psi_after+psi_before)/2, p=2)
+        loss_const_1 = -lambda_value * torch.min(torch.tensor(epsilon).detach(), L - torch.norm(psi_after-psi_before, p=2))
+        loss_const_2 = -lambda_value * torch.min(torch.tensor(epsilon).detach(), L*np.sin(np.pi/(2*L)) - torch.norm(psi_before_prime-psi_before, p=2))
 
-        loss = loss_max + loss_const_1 + loss_const_2
+        loss = loss_max + loss_min + loss_const_1 + loss_const_2
 
         self.optimizer.zero_grad()
         loss.mean().backward()
         self.optimizer.step()
 
-        return loss.mean().item(), loss_max.mean().item(), loss_const_1.mean().item(), loss_const_2.mean().item()
+        return loss.mean().item(), loss_max.mean().item(), loss_min.mean().item(), loss_const_1.mean().item(), loss_const_2.mean().item()
