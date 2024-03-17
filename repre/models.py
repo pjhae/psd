@@ -67,21 +67,18 @@ class Psi(nn.Module):
 
         return loss.mean().item()
     
-    def update_parameters(self, samples, L, lambda_value = 1, epsilon=1e-5):
+    def update_parameters(self, samples, L, lambda_value = 10, epsilon=1e-5):
         minibatch_before, minibatch_before_prime, minibatch_after, minibatch_after_prime = samples
         
         psi_before = self.forward(minibatch_before)
         psi_before_prime = self.forward(minibatch_before_prime)
         psi_after = self.forward(minibatch_after)
         psi_after_prime = self.forward(minibatch_after_prime)
-        
-        ### torch.norm 연산 잘못함!!!!!!!!
 
-        loss_max = -torch.norm(psi_after-psi_before, p=2)
-        loss_min = torch.norm((psi_after+psi_before)/2, p=2)
-        loss_const_1 = -lambda_value * torch.min(torch.tensor(epsilon).detach(), L - torch.norm(psi_after-psi_before, p=2))
-        loss_const_2 = -lambda_value * torch.min(torch.tensor(epsilon).detach(), L*np.sin(np.pi/(2*L)) - torch.norm(psi_before_prime-psi_before, p=2))
-
+        loss_max = -torch.norm(psi_after-psi_before, p=2, dim=1)
+        loss_min = torch.norm((psi_after+psi_before)/2, p=2, dim=1)
+        loss_const_1 = -lambda_value * torch.min(torch.tensor(epsilon).detach(), L - torch.norm(psi_after-psi_before, p=2, dim=1))
+        loss_const_2 = -lambda_value * torch.min(torch.tensor(epsilon).detach(), L*np.sin(np.pi/(2*L)) - torch.norm(psi_before_prime-psi_before, p=2, dim=1))
         loss = loss_max + loss_min + loss_const_1 + loss_const_2
 
         self.optimizer.zero_grad()

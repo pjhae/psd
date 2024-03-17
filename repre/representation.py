@@ -33,7 +33,7 @@ L = 6
 
 # Training loop
 updates = 0
-for i in range(50000):
+for i in range(100000):
     samples = get_minibatch(data, L=L, num_samples=128)
     total_loss, loss_max, loss_min, loss_const_1, loss_const_2 = psi.update_parameters(samples, L=L)
 
