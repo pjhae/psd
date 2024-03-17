@@ -75,6 +75,8 @@ class Psi(nn.Module):
         psi_after = self.forward(minibatch_after)
         psi_after_prime = self.forward(minibatch_after_prime)
         
+        ### torch.norm 연산 잘못함!!!!!!!!
+
         loss_max = -torch.norm(psi_after-psi_before, p=2)
         loss_min = torch.norm((psi_after+psi_before)/2, p=2)
         loss_const_1 = -lambda_value * torch.min(torch.tensor(epsilon).detach(), L - torch.norm(psi_after-psi_before, p=2))
