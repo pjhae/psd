@@ -4,6 +4,8 @@ metra/video
 /runs
 /checkpoints
 /video
+/repre/runs
+
 
 .idea
 # Byte-compiled / optimized / DLL files
