@@ -31,8 +31,8 @@ def generate_data(batch_size, trajectory_length, file_path):
         data[i, :, :] = np.stack([cos_value, sin_value, linear_value1, linear_value2], axis=1)
         # data[i, :, :] = np.stack([cos_value, sin_value, linear_value1, linear_value2, np.full(trajectory_length, w), np.full(trajectory_length, angle*180/np.pi)], axis=1)
 
-    # Save the data as a .npy file
-    # np.save(file_path, data)
+    # # Save the data as a .npy file
+    # # np.save(file_path, data)
         
     # # Visualize the code
     # loaded_data = data
@@ -71,3 +71,27 @@ def generate_data(batch_size, trajectory_length, file_path):
     # plt.pause(0.1) 
     # plt.close()
     return data
+
+def get_minibatch(data, L, num_samples):
+
+    batch_size, trajectory_length, feature_dim = data.shape
+    
+    # 배치 인덱스와 시작 시점 인덱스를 무작위로 선택
+    batch_indices = np.random.randint(0, batch_size, size=num_samples)
+    start_time_indices = np.random.randint(0, trajectory_length - (L+1), size=num_samples)
+    
+    # 선택된 인덱스를 기반으로 데이터 포인트 선택
+    minibatch_before = np.zeros((num_samples, feature_dim))
+    minibatch_before_prime = np.zeros((num_samples, feature_dim))
+    minibatch_after = np.zeros((num_samples, feature_dim))
+    minibatch_after_prime = np.zeros((num_samples, feature_dim))
+    
+    for i in range(num_samples):
+        batch_index = batch_indices[i]
+        start_index = start_time_indices[i]
+        minibatch_before[i, :] = data[batch_index, start_index, :]
+        minibatch_before_prime = data[batch_index, start_index + 1, :]
+        minibatch_after[i, :]  = data[batch_index, start_index + L, :]
+        minibatch_after_prime  = data[batch_index, start_index + (L+1), :]
+    
+    return minibatch_before, minibatch_before_prime, minibatch_after, minibatch_after_prime

@@ -13,12 +13,12 @@ def weights_init_(m):
         torch.nn.init.constant_(m.bias, 0)
 
 class Psi(nn.Module):
-    def __init__(self, num_inputs):
+    def __init__(self, num_inputs, latent_dim):
         super(Psi, self).__init__()
         
         self.lr = 0.0001
-        self.skill_dim = 2
-        self.hidden_dim = 512
+        self.skill_dim = latent_dim
+        self.hidden_dim = 1024
         self.device = torch.device("cuda")
         
         # Psi architecture
@@ -51,18 +51,38 @@ class Psi(nn.Module):
 
         return x1.detach().cpu().numpy()
 
-    def update_parameters(self, memory, batch_size, lambda_value, epsilon=1e-3):
+    def update_parameters_original(self, memory, batch_size, lambda_value, epsilon=1e-3):
         state_batch, _,  _, next_state_batch, _ = memory.sample(batch_size=batch_size)
         
         z_batch = state_batch[:, -self.skill_dim:]
 
-        phi_s = self.forward(state_batch)
-        phi_next_s = self.forward(next_state_batch)
+        psi_s = self.forward(state_batch)
+        psi_next_s = self.forward(next_state_batch)
         
-        loss = -(phi_next_s - phi_s).mul(torch.from_numpy(z_batch).to(self.device).detach()).sum(1) - lambda_value.detach() * torch.min(torch.tensor(epsilon).detach(), 1 - (phi_s - phi_next_s).pow(2).sum(1))
+        loss = -(psi_next_s - psi_s).mul(torch.from_numpy(z_batch).to(self.device).detach()).sum(1) - lambda_value.detach() * torch.min(torch.tensor(epsilon).detach(), 1 - (psi_s - psi_next_s).pow(2).sum(1))
 
         self.optimizer.zero_grad()
         loss.mean().backward()
         self.optimizer.step()
 
         return loss.mean().item()
+    
+    def update_parameters(self, samples, L, lambda_value = 1, epsilon=1e-5):
+        minibatch_before, minibatch_before_prime, minibatch_after, minibatch_after_prime = samples
+        
+        psi_before = self.forward(minibatch_before)
+        psi_before_prime = self.forward(minibatch_before_prime)
+        psi_after = self.forward(minibatch_after)
+        psi_after_prime = self.forward(minibatch_after_prime)
+        
+        loss_max = -torch.norm(psi_after-psi_before, p=2) + torch.norm((psi_after+psi_before)/2, p=2)
+        loss_const_1 = -lambda_value * 10 * torch.min(torch.tensor(epsilon).detach(), L - torch.norm(psi_after-psi_before, p=2))
+        loss_const_2 = -lambda_value * torch.min(torch.tensor(epsilon).detach(), 1 - torch.norm(psi_before_prime-psi_before, p=2))
+
+        loss = loss_max + loss_const_1 + loss_const_2
+
+        self.optimizer.zero_grad()
+        loss.mean().backward()
+        self.optimizer.step()
+
+        return loss.mean().item(), loss_max.mean().item(), loss_const_1.mean().item(), loss_const_2.mean().item()
