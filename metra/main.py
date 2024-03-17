@@ -122,7 +122,7 @@ for i_epoch in itertools.count(1):
                 action = agent.select_action(state)  # Sample action from policy
 
             next_state, reward, done, _ = env.step(action) # Step
-            env.render()
+            # env.render()
             next_state = np.concatenate([next_state, skill])
             psuedo_reward = np.dot(phi.forward_np(next_state) - phi.forward_np(state), skill) 
 
