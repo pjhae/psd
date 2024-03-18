@@ -12,7 +12,7 @@ def generate_data(batch_size, trajectory_length, file_path):
     data = np.zeros((batch_size, trajectory_length, 4))
     for i in range(batch_size):
         # Cosine and Sine functions
-        T = 10
+        T = 12
         a = np.random.choice(np.arange(-0.5, 0.5, 0.1))
         b = np.random.choice(np.arange(-0.5, 0.5, 0.1))
         s = np.random.choice(np.arange(-0.5, 0.5, 0.1))
@@ -142,20 +142,20 @@ def plot_graph(data, eval_data, latent_dim, writer, step):
 
     if latent_dim == 2: # directly plot
         for i in range(len(data)):
-            plt.scatter(data[i, 0], data[i, 1], color='red', alpha=0.1)  
+            plt.scatter(data[i, 0], data[i, 1], color='red', alpha=0.2)  
         for i in range(len(eval_data)):
-            plt.text(eval_data[i, 0], eval_data[i, 1], str(i), color='green', alpha=1.0, fontsize=12)  
-            plt.scatter(eval_data[i, 0], eval_data[i, 1], color='green', alpha=0.5)  
+            plt.text(eval_data[i, 0], eval_data[i, 1], str(i), color='blue', alpha=1.0, fontsize=12)  
+            plt.scatter(eval_data[i, 0], eval_data[i, 1], color='blue', alpha=0.2)  
 
     else: # PCA for higher dimension
         pca = PCA(n_components=2)
         pca_data = pca.fit_transform(data) 
         pca_data_eval = pca.fit_transform(eval_data) 
         for i in range(len(pca_data)):
-            plt.scatter(pca_data[i, 0], pca_data[i, 1], color='red', alpha=0.1)
+            plt.scatter(pca_data[i, 0], pca_data[i, 1], color='red', alpha=0.2)
         for i in range(len(pca_data_eval)):
-            plt.text(pca_data_eval[i, 0], pca_data_eval[i, 1], str(i), color='green', alpha=0.5, fontsize=12)  
-            plt.scatter(pca_data_eval[i, 0], pca_data_eval[i, 1], color='green', alpha=0.5)  
+            plt.text(pca_data_eval[i, 0], pca_data_eval[i, 1], str(i), color='blue', alpha=0.5, fontsize=12)  
+            plt.scatter(pca_data_eval[i, 0], pca_data_eval[i, 1], color='blue', alpha=0.2)  
 
     # labeling
     plt.title('Latent space visualization')

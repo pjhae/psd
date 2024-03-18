@@ -13,7 +13,7 @@ def parse_args():
     parser.add_argument("--lr", type=float, default=1e-4, help="learning rate for adam optimizer")
 
     # latent space
-    parser.add_argument("--period", type=int, default=5, help="(half) period of skill")
+    parser.add_argument("--period", type=int, default=6, help="(HALF) period of skill")
     parser.add_argument("--latent_dim", type=int, default=2, help="latent dimension for skill")
 
     # evaluation

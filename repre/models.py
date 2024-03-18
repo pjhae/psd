@@ -84,7 +84,7 @@ class Psi(nn.Module):
         loss_min = torch.norm((psi_after+psi_before)/2, p=2, dim=-1)
         loss_const_1 = -lambda_value * torch.min(torch.tensor(epsilon).detach(), L - torch.norm(psi_after-psi_before, p=2, dim=-1))
         loss_const_2 = -lambda_value * torch.min(torch.tensor(epsilon).detach(), L*np.sin(np.pi/(2*L)) - torch.norm(psi_before_prime-psi_before, p=2, dim=-1))
-        loss = loss_max + 0.5*loss_min + loss_const_1 + loss_const_2
+        loss = loss_max + loss_min + loss_const_1 + loss_const_2
 
         self.optimizer.zero_grad()
         loss.mean().backward()
