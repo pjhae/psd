@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-
+from sklearn.decomposition import PCA
 
 def generate_data(batch_size, trajectory_length, file_path):
 
@@ -16,6 +16,9 @@ def generate_data(batch_size, trajectory_length, file_path):
         a = np.random.choice(np.arange(-0.5, 0.5, 0.1))
         b = np.random.choice(np.arange(-0.5, 0.5, 0.1))
         s = np.random.choice(np.arange(-0.5, 0.5, 0.1))
+        a = 1
+        b = 0
+
         cos_value = b + a*np.cos(2 * np.pi * w * t + s)
         sin_value = b + a*np.sin(2 * np.pi * w * t + s)
 
@@ -31,56 +34,65 @@ def generate_data(batch_size, trajectory_length, file_path):
         data[i, :, :] = np.stack([cos_value, sin_value, linear_value1, linear_value2], axis=1)
         # data[i, :, :] = np.stack([cos_value, sin_value, linear_value1, linear_value2, np.full(trajectory_length, w), np.full(trajectory_length, angle*180/np.pi)], axis=1)
 
-    # # Save the data as a .npy file
-    # # np.save(file_path, data)
+    # # Save the data as a .npy file (Optional)
+    # np.save(file_path, data)
+    
+    # # Visualize
+    # visualize_traj(data, trajectory_length)
         
-    # # Visualize the code
-    # loaded_data = data
-
-    # # Select one episode randomly
-    # selected_episode = np.random.randint(batch_size)
-
-    # # Extract values for each dimension
-    # cos_values = loaded_data[selected_episode, :, 0]
-    # sin_values = loaded_data[selected_episode, :, 1]
-    # linear_values1 = loaded_data[selected_episode, :, 2]
-    # linear_values2 = loaded_data[selected_episode, :, 3]
-    # t = np.arange(trajectory_length)
-
-    # # Plot each dimension
-    # plt.figure(figsize=(12, 8))
-
-    # plt.subplot(2, 2, 1)
-    # plt.plot(t, cos_values)
-    # plt.title('Cosine Function')
-
-    # plt.subplot(2, 2, 2)
-    # plt.plot(t, sin_values)
-    # plt.title('Sine Function')
-
-    # plt.subplot(2, 2, 3)
-    # plt.plot(t, linear_values1)
-    # plt.title('Linear Values 1')
-
-    # plt.subplot(2, 2, 4)
-    # plt.plot(t, linear_values2)
-    # plt.title('Linear Values 2')
-
-    # plt.tight_layout()
-    # plt.show()
-    # plt.pause(0.1) 
-    # plt.close()
     return data
 
-def get_minibatch(data, L, num_samples):
+
+def visualize_traj(data, trajectory_length):
+
+    loaded_data = data
+
+    # Select first episode
+    selected_episode = 0
+
+    # Extract values for each dimension
+    cos_values = loaded_data[selected_episode, :, 0]
+    sin_values = loaded_data[selected_episode, :, 1]
+    linear_values1 = loaded_data[selected_episode, :, 2]
+    linear_values2 = loaded_data[selected_episode, :, 3]
+    t = np.arange(trajectory_length)
+
+    # Plot each dimension
+    plt.figure(figsize=(12, 8))
+
+    plt.subplot(2, 2, 1)
+    plt.plot(t, cos_values)
+    plt.title('Cosine Function')
+
+    plt.subplot(2, 2, 2)
+    plt.plot(t, sin_values)
+    plt.title('Sine Function')
+
+    plt.subplot(2, 2, 3)
+    plt.plot(t, linear_values1)
+    plt.title('Linear Values 1')
+
+    plt.subplot(2, 2, 4)
+    plt.plot(t, linear_values2)
+    plt.title('Linear Values 2')
+
+    plt.tight_layout()
+    plt.show()
+    plt.pause(0.1) 
+    plt.close()
+
+
+def get_minibatch(data, num_samples, args):
+
+    L = args.period
 
     batch_size, trajectory_length, feature_dim = data.shape
     
-    # 배치 인덱스와 시작 시점 인덱스를 무작위로 선택
+    # randomly choose batch and start idx
     batch_indices = np.random.randint(0, batch_size, size=num_samples)
     start_time_indices = np.random.randint(0, trajectory_length - (L+1), size=num_samples)
     
-    # 선택된 인덱스를 기반으로 데이터 포인트 선택
+    # select data point
     minibatch_before = np.zeros((num_samples, feature_dim))
     minibatch_before_prime = np.zeros((num_samples, feature_dim))
     minibatch_after = np.zeros((num_samples, feature_dim))
@@ -95,3 +107,28 @@ def get_minibatch(data, L, num_samples):
         minibatch_after_prime  = data[batch_index, start_index + (L+1), :]
     
     return minibatch_before, minibatch_before_prime, minibatch_after, minibatch_after_prime
+
+
+def plot_graph(data, latent_dim, writer, step):
+
+    plt.figure(figsize=(12, 8))  
+
+    if latent_dim == 2: # directly plot
+        plt.plot(data[:, 0], data[:, 1], 'o')  
+
+    else: # PCA for higher dimension
+        pca = PCA(n_components=2)
+        pca_data = pca.fit_transform(data) 
+        for i in range(len(pca_data)):
+            plt.scatter(pca_data[i, 0], pca_data[i, 1], color='red', alpha=0.5)
+
+    # labeling
+    plt.title('2D NumPy Data Plot')
+    plt.xlabel('X axis')
+    plt.ylabel('Y axis')
+
+    # add figure
+    writer.add_figure('numpy_plot', plt.gcf(), step)
+
+    # plot
+    # plt.show()
