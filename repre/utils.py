@@ -12,15 +12,15 @@ def generate_data(batch_size, trajectory_length, file_path):
     data = np.zeros((batch_size, trajectory_length, 4))
     for i in range(batch_size):
         # Cosine and Sine functions
-        w = 0.09
+        T = 10
         a = np.random.choice(np.arange(-0.5, 0.5, 0.1))
         b = np.random.choice(np.arange(-0.5, 0.5, 0.1))
         s = np.random.choice(np.arange(-0.5, 0.5, 0.1))
         a = 1
         b = 0
 
-        cos_value = b + a*np.cos(2 * np.pi * w * t + s)
-        sin_value = b + a*np.sin(2 * np.pi * w * t + s)
+        cos_value = b + a*np.cos(2 * np.pi / T * t + s)
+        sin_value = b + a*np.sin(2 * np.pi / T * t + s)
 
         # Linearly increasing values with random slopes
         angle = np.random.choice(np.arange(0, 2*np.pi, 1/3*np.pi))
@@ -108,22 +108,57 @@ def get_minibatch(data, num_samples, args):
     
     return minibatch_before, minibatch_before_prime, minibatch_after, minibatch_after_prime
 
+def get_evalbatch(data, num_samples, args):
 
-def plot_graph(data, latent_dim, writer, step):
+    L = args.period
+
+    batch_size, trajectory_length, feature_dim = data.shape
+    
+    # randomly choose batch and start idx
+    batch_indices = np.random.randint(0, batch_size, size=num_samples)
+    start_time_indices = np.random.randint(0, trajectory_length - (L+1), size=num_samples)
+    
+    # select data point for visualization
+    minibatch = np.zeros((num_samples, feature_dim))
+
+    for i in range(num_samples):
+        batch_index = batch_indices[i]
+        start_index = start_time_indices[i]
+        minibatch[i, :] = data[batch_index, start_index, :]
+
+    # (eval) randomly choose batch and start idx
+    batch_index = np.random.randint(0, batch_size)
+    start_index = np.random.randint(0, trajectory_length - (4*L+1))
+
+    # (eval) select data point for eval
+    minibatch_eval = data[batch_index, start_index:start_index + (4*L), :]
+    
+    return minibatch, minibatch_eval
+
+
+def plot_graph(data, eval_data, latent_dim, writer, step):
 
     plt.figure(figsize=(12, 8))  
 
     if latent_dim == 2: # directly plot
-        plt.plot(data[:, 0], data[:, 1], 'o')  
+        for i in range(len(data)):
+            plt.scatter(data[i, 0], data[i, 1], color='red', alpha=0.1)  
+        for i in range(len(eval_data)):
+            plt.text(eval_data[i, 0], eval_data[i, 1], str(i), color='green', alpha=1.0, fontsize=12)  
+            plt.scatter(eval_data[i, 0], eval_data[i, 1], color='green', alpha=0.5)  
 
     else: # PCA for higher dimension
         pca = PCA(n_components=2)
         pca_data = pca.fit_transform(data) 
+        pca_data_eval = pca.fit_transform(eval_data) 
         for i in range(len(pca_data)):
-            plt.scatter(pca_data[i, 0], pca_data[i, 1], color='red', alpha=0.5)
+            plt.scatter(pca_data[i, 0], pca_data[i, 1], color='red', alpha=0.1)
+        for i in range(len(pca_data_eval)):
+            plt.text(pca_data_eval[i, 0], pca_data_eval[i, 1], str(i), color='green', alpha=0.5, fontsize=12)  
+            plt.scatter(pca_data_eval[i, 0], pca_data_eval[i, 1], color='green', alpha=0.5)  
 
     # labeling
-    plt.title('2D NumPy Data Plot')
+    plt.title('Latent space visualization')
     plt.xlabel('X axis')
     plt.ylabel('Y axis')
 

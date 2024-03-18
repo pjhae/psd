@@ -3,7 +3,7 @@ from torch.utils.tensorboard import SummaryWriter
 import datetime
 
 from repre.models import Psi
-from repre.utils import generate_data, get_minibatch, plot_graph
+from repre.utils import generate_data, get_minibatch, get_evalbatch, plot_graph
 
 # for argument
 from arguments import parse_args
@@ -40,9 +40,11 @@ for epoch in range(args.num_epoch):
     writer.add_scalar('loss/const_1', loss_const_2, updates)
 
     if epoch % args.num_epoch_for_eval == 0:
-        minibatch_before, minibatch_before_prime, minibatch_after, minibatch_after_prime = get_minibatch(data, args.eval_batch_size, args)
-        encoded_data = psi.forward_np(minibatch_before)
-        plot_graph(encoded_data, args.latent_dim, writer, updates)
+        minibatch, minibatch_eval = get_evalbatch(data, args.eval_batch_size, args)
+        encoded_data = psi.forward_np(minibatch)
+        encoded_data_eval = psi.forward_np(minibatch_eval)
+
+        plot_graph(encoded_data, encoded_data_eval, args.latent_dim, writer, updates)
 
     updates += 1
 
