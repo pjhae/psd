@@ -172,7 +172,7 @@ class AntEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
     def __init__(
         self,
-        xml_file="/home/jonghae/metra_reproduce/envs/mujoco/assets/ant.xml", 
+        xml_file="/home/jonghae/psd/envs/mujoco/assets/ant.xml", 
         ctrl_cost_weight=0.5,
         contact_cost_weight=5e-4,
         healthy_reward=1.0,

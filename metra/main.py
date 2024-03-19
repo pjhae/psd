@@ -73,7 +73,7 @@ torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
 # For video
-video_directory = '/home/jonghae/metra_reproduce/metra/video/{}'.format(datetime.datetime.now().strftime("%H:%M:%S %p"))
+video_directory = '/home/jonghae/psd/metra/video/{}'.format(datetime.datetime.now().strftime("%H:%M:%S %p"))
 video = VideoRecorder(dir_name = video_directory)
 
 # Tesnorboard
@@ -163,7 +163,7 @@ for i_epoch in itertools.count(1):
         agent.save_checkpoint(args.env_name,"{}".format(episode_idx))
 
     # Evaluate all skill
-    if episode_idx % 100 == 0:
+    if episode_idx % 80 == 0:
         video.init(enabled=True)
         avg_psuedo_reward = 0.
         avg_dist_reward = 0.
