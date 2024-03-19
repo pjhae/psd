@@ -1,6 +1,11 @@
 metra/runs
 metra/checkpoints
 metra/video
+
+algo/runs
+algo/checkpoints
+algo/video
+
 /runs
 /checkpoints
 /video
