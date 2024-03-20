@@ -30,7 +30,7 @@ updates = 0
 
 for epoch in range(args.num_epoch):
 
-    samples = get_minibatch(data, args.batch_size, args)
+    samples = get_minibatch(data, args.batch_size)
     total_loss, loss_max, loss_min, loss_const_1, loss_const_2 = psi.update_parameters(samples, args)
 
     writer.add_scalar('loss/total', total_loss, updates)

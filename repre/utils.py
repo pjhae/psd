@@ -9,10 +9,10 @@ def generate_data(batch_size, trajectory_length, file_path):
     t = np.arange(trajectory_length)
 
     # Generate data for each batch
-    data = np.zeros((batch_size, trajectory_length, 4))
+    data = np.zeros((batch_size, trajectory_length, 5))
     for i in range(batch_size):
         # Cosine and Sine functions
-        T = 12
+        T = np.random.choice(np.arange(10, 25, 5))
         a = np.random.choice(np.arange(-0.5, 0.5, 0.1))
         b = np.random.choice(np.arange(-0.5, 0.5, 0.1))
         s = np.random.choice(np.arange(-0.5, 0.5, 0.1))
@@ -31,7 +31,7 @@ def generate_data(batch_size, trajectory_length, file_path):
         # noise = np.random.normal(0, noise_level, (trajectory_length, 6))
 
         # Stacking and storing the values
-        data[i, :, :] = np.stack([cos_value, sin_value, linear_value1, linear_value2], axis=1)
+        data[i, :, :] = np.stack([cos_value, sin_value, linear_value1, linear_value2, np.full(trajectory_length, T/2)], axis=1)
         # data[i, :, :] = np.stack([cos_value, sin_value, linear_value1, linear_value2, np.full(trajectory_length, w), np.full(trajectory_length, angle*180/np.pi)], axis=1)
 
     # # Save the data as a .npy file (Optional)
@@ -82,31 +82,81 @@ def visualize_traj(data, trajectory_length):
     plt.close()
 
 
-def get_minibatch(data, num_samples, args):
+# def get_minibatch_deprecated(data, num_samples, args):
 
-    L = args.period
+#     L = args.period
 
-    batch_size, trajectory_length, feature_dim = data.shape
+#     batch_size, trajectory_length, feature_dim = data.shape
     
+#     # randomly choose batch and start idx
+#     batch_indices = np.random.randint(0, batch_size, size=num_samples)
+#     start_time_indices = np.random.randint(0, trajectory_length - (L+1), size=num_samples)
+    
+#     # select data point
+#     minibatch_before = np.zeros((num_samples, feature_dim))
+#     minibatch_before_prime = np.zeros((num_samples, feature_dim))
+#     minibatch_after = np.zeros((num_samples, feature_dim))
+#     minibatch_after_prime = np.zeros((num_samples, feature_dim))
+    
+#     for i in range(num_samples):
+#         batch_index = batch_indices[i]
+#         start_index = start_time_indices[i]
+#         minibatch_before[i, :] = data[batch_index, start_index, :]
+#         minibatch_before_prime = data[batch_index, start_index + 1, :]
+#         minibatch_after[i, :]  = data[batch_index, start_index + L, :]
+#         minibatch_after_prime  = data[batch_index, start_index + (L+1), :]
+    
+#     return minibatch_before, minibatch_before_prime, minibatch_after, minibatch_after_prime
+
+
+def get_minibatch(data, num_samples):
+    batch_size, trajectory_length, feature_dim = data.shape
+
     # randomly choose batch and start idx
     batch_indices = np.random.randint(0, batch_size, size=num_samples)
-    start_time_indices = np.random.randint(0, trajectory_length - (L+1), size=num_samples)
-    
-    # select data point
     minibatch_before = np.zeros((num_samples, feature_dim))
     minibatch_before_prime = np.zeros((num_samples, feature_dim))
     minibatch_after = np.zeros((num_samples, feature_dim))
     minibatch_after_prime = np.zeros((num_samples, feature_dim))
-    
+
     for i in range(num_samples):
         batch_index = batch_indices[i]
-        start_index = start_time_indices[i]
+        L = data[batch_indices[i], 0, -1].astype(int)  # L_data
+        start_index = np.random.randint(0, trajectory_length - L - 1)  # Compute start index
+
         minibatch_before[i, :] = data[batch_index, start_index, :]
-        minibatch_before_prime = data[batch_index, start_index + 1, :]
-        minibatch_after[i, :]  = data[batch_index, start_index + L, :]
-        minibatch_after_prime  = data[batch_index, start_index + (L+1), :]
-    
+        minibatch_before_prime[i, :] = data[batch_index, start_index + 1, :]
+        minibatch_after[i, :] = data[batch_index, start_index + L, :]
+        minibatch_after_prime[i, :] = data[batch_index, start_index + L + 1, :]
+
     return minibatch_before, minibatch_before_prime, minibatch_after, minibatch_after_prime
+
+# def get_evalbatch_deprecated(data, num_samples, args):
+
+#     L = args.period
+
+#     batch_size, trajectory_length, feature_dim = data.shape
+    
+#     # randomly choose batch and start idx
+#     batch_indices = np.random.randint(0, batch_size, size=num_samples)
+#     start_time_indices = np.random.randint(0, trajectory_length - (L+1), size=num_samples)
+    
+#     # select data point for visualization
+#     minibatch = np.zeros((num_samples, feature_dim))
+
+#     for i in range(num_samples):
+#         batch_index = batch_indices[i]
+#         start_index = start_time_indices[i]
+#         minibatch[i, :] = data[batch_index, start_index, :]
+
+#     # (eval) randomly choose batch and start idx
+#     batch_index = np.random.randint(0, batch_size)
+#     start_index = np.random.randint(0, trajectory_length - (4*L+1))
+
+#     # (eval) select data point for eval
+#     minibatch_eval = data[batch_index, start_index:start_index + (4*L), :]
+    
+#     return minibatch, minibatch_eval
 
 def get_evalbatch(data, num_samples, args):
 
@@ -134,7 +184,6 @@ def get_evalbatch(data, num_samples, args):
     minibatch_eval = data[batch_index, start_index:start_index + (4*L), :]
     
     return minibatch, minibatch_eval
-
 
 def plot_graph(data, eval_data, latent_dim, writer, step):
 
