@@ -14,7 +14,7 @@ def parse_args():
 
     # latent space
     parser.add_argument("--period", type=int, default=6, help="(HALF) period of skill")
-    parser.add_argument("--latent_dim", type=int, default=2, help="latent dimension for skill")
+    parser.add_argument("--latent_dim", type=int, default=8, help="latent dimension for skill")
 
     # evaluation
     parser.add_argument("--num_epoch_for_eval", type=int, default=500, help="period for evaluation")

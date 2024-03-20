@@ -41,3 +41,46 @@ class ReplayMemory:
         with open(save_path, "rb") as f:
             self.buffer = pickle.load(f)
             self.position = len(self.buffer) % self.capacity
+
+
+class TrajectoryReplayBuffer:
+    def __init__(self, capacity, trajectory_length, seed=None):
+        if seed is not None:
+            np.random.seed(seed)
+        self.capacity = capacity
+        self.trajectory_length = trajectory_length
+        self.buffer = []
+        self.position = 0
+
+    def push(self, trajectory):
+        # trajectory is list of following tuples : (state, action, reward, next_state, done)
+        if len(self.buffer) < self.capacity:
+            self.buffer.append(None)
+        self.buffer[self.position] = trajectory
+        self.position = (self.position + 1) % self.capacity
+
+    def sample(self, batch_size):
+        trajectories = random.sample(self.buffer, batch_size)
+        # trajectories is list of list : [[[state, action, reward, next_state, done], ...], ...]
+
+        # stack trajectory component
+        states, actions, rewards, next_states, dones = [], [], [], [], []
+        for traj in trajectories:
+            state, action, reward, next_state, done = zip(*traj)
+            states.append(state)
+            actions.append(action)
+            rewards.append(reward)
+            next_states.append(next_state)
+            dones.append(done)
+
+        # convert to numpy array/ add batch dim
+        states = np.array(states)
+        actions = np.array(actions)
+        rewards = np.array(rewards)
+        next_states = np.array(next_states)
+        dones = np.array(dones)
+
+        return states, actions, rewards, next_states, dones
+
+    def __len__(self):
+        return len(self.buffer)

@@ -73,7 +73,7 @@ torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
 # For video
-video_directory = '/home/jonghae/psd/metra/video/{}'.format(datetime.datetime.now().strftime("%H:%M:%S %p"))
+video_directory = '/home/jonghae/psd/algo/video/{}'.format(datetime.datetime.now().strftime("%H:%M:%S %p"))
 video = VideoRecorder(dir_name = video_directory)
 
 # Tesnorboard

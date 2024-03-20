@@ -160,7 +160,7 @@ def get_minibatch(data, num_samples):
 
 def get_evalbatch(data, num_samples, args):
 
-    L = args.period
+    L = 5
 
     batch_size, trajectory_length, feature_dim = data.shape
     
@@ -198,8 +198,11 @@ def plot_graph(data, eval_data, latent_dim, writer, step):
 
     else: # PCA for higher dimension
         pca = PCA(n_components=2)
-        pca_data = pca.fit_transform(data) 
-        pca_data_eval = pca.fit_transform(eval_data) 
+        combined_data = np.concatenate([data, eval_data], axis=0)
+        pca_combined_data = pca.fit_transform(combined_data)
+        pca_data = pca_combined_data[:len(data)]
+        pca_data_eval = pca_combined_data[len(data):]
+
         for i in range(len(pca_data)):
             plt.scatter(pca_data[i, 0], pca_data[i, 1], color='red', alpha=0.2)
         for i in range(len(pca_data_eval)):
