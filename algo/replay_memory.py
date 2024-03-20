@@ -43,7 +43,7 @@ class ReplayMemory:
             self.position = len(self.buffer) % self.capacity
 
 
-class TrajectoryReplayBuffer:
+class TrajectoryReplayMemory:
     def __init__(self, capacity, trajectory_length, seed=None):
         if seed is not None:
             np.random.seed(seed)

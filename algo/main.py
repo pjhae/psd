@@ -6,7 +6,9 @@ import itertools
 import torch
 from sac import SAC
 from torch.utils.tensorboard import SummaryWriter
-from replay_memory import ReplayMemory
+from replay_memory import ReplayMemory, TrajectoryReplayMemory
+
+from model_psd import Psi
 from model_metra import Phi, Lambda
 
 from utils_sac import VideoRecorder
@@ -82,6 +84,7 @@ writer = SummaryWriter('runs/{}_SAC_{}_{}_{}'.format(datetime.datetime.now().str
 
 # Memory
 memory = ReplayMemory(args.replay_size, args.seed)
+memory_Traj = TrajectoryReplayMemory(args.replay_size, args.seed)
 
 # Training Loop
 total_numsteps = 0
@@ -109,6 +112,7 @@ for i_epoch in itertools.count(1):
         episode_reward = 0
         episode_steps = 0
         episode_idx += 1
+        episode_trajectory = []
 
         done = False
         state = env.reset()
@@ -132,7 +136,14 @@ for i_epoch in itertools.count(1):
 
             mask = 1 if episode_steps == env._max_episode_steps else float(not done)
             memory.push(state, action, psuedo_reward, next_state, mask) # Append transition to memory
+            episode_trajectory.append((state, action, psuedo_reward, next_state, mask))
             state = next_state
+
+        memory_Traj.push(episode_trajectory)
+
+        if i_epoch > 1:
+            states, actions, rewards, next_states, dones = memory_Traj.sample(3)
+            print(states.shape)
 
         writer.add_scalar('reward/train', episode_reward, episode_idx)
         print("Episode: {}, total numsteps: {}, episode steps: {}, reward: {}".format(episode_idx, total_numsteps, episode_steps, round(episode_reward, 2)))
