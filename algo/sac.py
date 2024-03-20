@@ -13,6 +13,7 @@ class SAC(object):
         self.tau = args.tau
         self.alpha = args.alpha
         self.skill_dim = args.skill_dim
+        self.radius_dim = args.radius_dim
 
         self.policy_type = args.policy
         self.target_update_interval = args.target_update_interval
@@ -62,7 +63,7 @@ class SAC(object):
         state_batch = torch.FloatTensor(state_batch).to(self.device)
         next_state_batch = torch.FloatTensor(next_state_batch).to(self.device)
 
-        skill_batch = state_batch[:, -self.skill_dim:]
+        skill_batch = state_batch[:, -self.skill_dim-self.radius_dim:-self.radius_dim]
 
         action_batch = torch.FloatTensor(action_batch).to(self.device)
         mask_batch = torch.FloatTensor(mask_batch).to(self.device).unsqueeze(1)

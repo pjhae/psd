@@ -56,6 +56,8 @@ parser.add_argument('--replay_size', type=int, default=1000000, metavar='N',
                     help='size of replay buffer (default: 1000000)')
 parser.add_argument('--skill_dim', type=int, default=2, metavar='N',
                     help='dimension of skill (default: 8)')
+parser.add_argument('--radius_dim', type=int, default=3, metavar='N',
+                    help='dimension of radius (default: 3)')
 parser.add_argument('--cuda', action="store_false",
                     help='run on CUDA (default: True)')
 args = parser.parse_args()
@@ -94,14 +96,22 @@ episode_idx = 0
 # Skill dim
 skill_dim = args.skill_dim
 
+# Radius dim
+radius_dim = args.radius_dim
+
 # Agent
-agent = SAC(env.observation_space.shape[0] + skill_dim, env.action_space, args)
+agent = SAC(env.observation_space.shape[0] + skill_dim + radius_dim, env.action_space, args)
 
 # phi
 phi = Phi(env.observation_space.shape[0], args).to(device)
 
+# psi
+psi = Psi(env.observation_space.shape[0] + radius_dim, args).to(device)
+
 # Check action dim
-print("state :", env.observation_space.shape[0])
+print("state_dim :", env.observation_space.shape[0])
+print("latent_dim :", skill_dim)
+print("radius_dim :", radius_dim)
 
 # lambda
 lamb = Lambda(args)
@@ -117,7 +127,8 @@ for i_epoch in itertools.count(1):
         done = False
         state = env.reset()
         skill = generate_skill_cont(skill_dim)
-        state = np.concatenate([state, skill])
+        radius = generate_skill(radius_dim)
+        state = np.concatenate([state, skill, radius])
         
         while not done:
             if args.start_steps > total_numsteps:
@@ -127,7 +138,7 @@ for i_epoch in itertools.count(1):
 
             next_state, reward, done, _ = env.step(action) # Step
             # env.render()
-            next_state = np.concatenate([next_state, skill])
+            next_state = np.concatenate([next_state, skill, radius])
             psuedo_reward = np.dot(phi.forward_np(next_state) - phi.forward_np(state), skill) 
 
             episode_steps += 1
@@ -141,8 +152,8 @@ for i_epoch in itertools.count(1):
 
         memory_Traj.push(episode_trajectory)
 
-        if i_epoch > 1:
-            states, actions, rewards, next_states, dones = memory_Traj.sample(3)
+        if i_epoch > 5:
+            states, actions, rewards, next_states, dones = memory_Traj.sample(32)
             print(states.shape)
 
         writer.add_scalar('reward/train', episode_reward, episode_idx)

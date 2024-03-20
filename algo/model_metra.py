@@ -18,6 +18,7 @@ class Phi(nn.Module):
         
         self.lr = args.lr
         self.skill_dim = args.skill_dim
+        self.radius_dim = args.radius_dim
         self.hidden_dim = args.hidden_size
         self.device = torch.device("cuda" if args.cuda else "cpu")
         
@@ -33,7 +34,7 @@ class Phi(nn.Module):
     def forward(self, state):
         
         state = torch.from_numpy(state).float().to(self.device)
-        state = state[:, :-self.skill_dim]
+        state = state[:, :-self.skill_dim-self.radius_dim]
 
         x1 = F.relu(self.linear1(state))
         x1 = F.relu(self.linear2(x1))
@@ -44,7 +45,7 @@ class Phi(nn.Module):
     def forward_np(self, state):
         
         state = torch.from_numpy(state).float().to(self.device)
-        state = state[:-self.skill_dim]
+        state = state[:-self.skill_dim-self.radius_dim]
 
         x1 = F.relu(self.linear1(state))
         x1 = F.relu(self.linear2(x1))
@@ -56,7 +57,7 @@ class Phi(nn.Module):
     def update_parameters(self, memory, batch_size, lambda_value, epsilon=1e-3):
         state_batch, _,  _, next_state_batch, _ = memory.sample(batch_size=batch_size)
         
-        z_batch = state_batch[:, -self.skill_dim:]
+        z_batch = state_batch[:, -self.skill_dim-self.radius_dim:-self.radius_dim]
 
         phi_s = self.forward(state_batch)
         phi_next_s = self.forward(next_state_batch)
