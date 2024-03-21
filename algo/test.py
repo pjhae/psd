@@ -11,7 +11,7 @@ from model_metra import Phi, Lambda
 import matplotlib.pyplot as plt
 
 from utils_sac import VideoRecorder
-from utils_metra import generate_skill, generate_skill_cont, add_noise_to_skill
+from utils_metra import generate_skill_disc, generate_skill_cont, add_noise_to_skill
 
 from envs.register import register_custom_envs
 
@@ -55,6 +55,11 @@ parser.add_argument('--replay_size', type=int, default=1000000, metavar='N',
                     help='size of replay buffer (default: 1000000)')
 parser.add_argument('--skill_dim', type=int, default=2, metavar='N',
                     help='dimension of skill (default: 8)')
+parser.add_argument('--radius_dim', type=int, default=3, metavar='N',
+                    help='dimension of radius (default: 3)')
+parser.add_argument('--radius_latent_dim', type=int, default=2, metavar='N',
+                    help='dimension of radius latent (default: 3)')
+
 parser.add_argument('--cuda', action="store_false",
                     help='run on CUDA (default: True)')
 args = parser.parse_args()
@@ -62,7 +67,7 @@ args = parser.parse_args()
 register_custom_envs()
 
 env_name = 'Ant-v3'
-num_epi = 293600
+num_epi = 2000
 
 # Environment
 env = gym.make(env_name)
@@ -72,35 +77,36 @@ env.action_space.seed(args.seed)
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
-# Skill dim
-skill_dim = args.skill_dim
+# Radius dim
+radius_dim = args.radius_dim
+radius_latent_dim = args.radius_latent_dim
 
 # Agent
-agent = SAC(env.observation_space.shape[0] + skill_dim, env.action_space, args)
-
-# Memory
-memory = ReplayMemory(args.replay_size, args.seed)
+agent = SAC(env.observation_space.shape[0] + radius_dim, env.action_space, args)
 
 agent.load_checkpoint("checkpoints/sac_checkpoint_{}_{}".format(env_name, num_epi), True )
+
 
 avg_reward = 0.
 avg_step = 0.
 episodes = 10
 while True:
     state = env.reset()
-    skill = generate_skill_cont(skill_dim)
-    state = np.concatenate([state, skill])
+    radius = generate_skill_disc(radius_dim)
+    radius = np.array([1,0,0])
+    state = np.concatenate([state, radius])
     episode_reward = 0
     step = 0
     done = False
+    print(radius)
     while not done:
-
+        
         action = agent.select_action(state, evaluate=True)
         next_state, reward, done, _ = env.step(action)
         env.render()
         episode_reward += reward
         step += 1
-        next_state = np.concatenate([next_state[:29], skill])
+        next_state = np.concatenate([next_state, radius])
         state = next_state
 
     print('episode_reward :' ,reward)
@@ -110,8 +116,3 @@ while True:
     avg_reward += episode_reward
     avg_step += step
 
-states_list = np.array(states_list)
-print("data_shape_is :", states_list.shape)
-
-file_path = './ant_time_series_data_140.npy'
-np.save(file_path, states_list)

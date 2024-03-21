@@ -9,10 +9,9 @@ from torch.utils.tensorboard import SummaryWriter
 from replay_memory import ReplayMemory, TrajectoryReplayMemory
 
 from model_psd import Psi
-from model_metra import Phi, Lambda
 
 from utils_sac import VideoRecorder
-from utils_metra import generate_skill, generate_skill_cont
+from utils_metra import generate_skill_disc, generate_skill_cont
 
 from envs.register import register_custom_envs
 
@@ -58,6 +57,10 @@ parser.add_argument('--skill_dim', type=int, default=2, metavar='N',
                     help='dimension of skill (default: 8)')
 parser.add_argument('--radius_dim', type=int, default=3, metavar='N',
                     help='dimension of radius (default: 3)')
+parser.add_argument('--radius_latent_dim', type=int, default=2, metavar='N',
+                    help='dimension of radius latent (default: 3)')
+
+
 parser.add_argument('--cuda', action="store_false",
                     help='run on CUDA (default: True)')
 args = parser.parse_args()
@@ -86,35 +89,26 @@ writer = SummaryWriter('runs/{}_SAC_{}_{}_{}'.format(datetime.datetime.now().str
 
 # Memory
 memory = ReplayMemory(args.replay_size, args.seed)
-memory_Traj = TrajectoryReplayMemory(args.replay_size, args.seed)
+memory_traj = TrajectoryReplayMemory(args.replay_size, args.seed)
 
 # Training Loop
 total_numsteps = 0
 updates = 0
 episode_idx = 0
 
-# Skill dim
-skill_dim = args.skill_dim
-
 # Radius dim
 radius_dim = args.radius_dim
+radius_latent_dim = args.radius_latent_dim
 
 # Agent
-agent = SAC(env.observation_space.shape[0] + skill_dim + radius_dim, env.action_space, args)
-
-# phi
-phi = Phi(env.observation_space.shape[0], args).to(device)
+agent = SAC(env.observation_space.shape[0] + radius_dim, env.action_space, args)
 
 # psi
-psi = Psi(env.observation_space.shape[0] + radius_dim, args).to(device)
+psi = Psi(env.observation_space.shape[0] + radius_dim, radius_latent_dim).to(device)
 
 # Check action dim
 print("state_dim :", env.observation_space.shape[0])
-print("latent_dim :", skill_dim)
 print("radius_dim :", radius_dim)
-
-# lambda
-lamb = Lambda(args)
 
 # Training Loop
 for i_epoch in itertools.count(1):
@@ -126,9 +120,8 @@ for i_epoch in itertools.count(1):
 
         done = False
         state = env.reset()
-        skill = generate_skill_cont(skill_dim)
-        radius = generate_skill(radius_dim)
-        state = np.concatenate([state, skill, radius])
+        radius = generate_skill_disc(radius_dim)
+        state = np.concatenate([state, radius])
         
         while not done:
             if args.start_steps > total_numsteps:
@@ -138,8 +131,8 @@ for i_epoch in itertools.count(1):
 
             next_state, reward, done, _ = env.step(action) # Step
             # env.render()
-            next_state = np.concatenate([next_state, skill, radius])
-            psuedo_reward = np.dot(phi.forward_np(next_state) - phi.forward_np(state), skill) 
+            next_state = np.concatenate([next_state, radius])
+            psuedo_reward = 0
 
             episode_steps += 1
             total_numsteps += 1
@@ -150,11 +143,8 @@ for i_epoch in itertools.count(1):
             episode_trajectory.append((state, action, psuedo_reward, next_state, mask))
             state = next_state
 
-        memory_Traj.push(episode_trajectory)
-
-        if i_epoch > 5:
-            states, actions, rewards, next_states, dones = memory_Traj.sample(32)
-            print(states.shape)
+        # Append transition to trajectory memory
+        memory_traj.push(episode_trajectory)
 
         writer.add_scalar('reward/train', episode_reward, episode_idx)
         print("Episode: {}, total numsteps: {}, episode steps: {}, reward: {}".format(episode_idx, total_numsteps, episode_steps, round(episode_reward, 2)))
@@ -164,18 +154,22 @@ for i_epoch in itertools.count(1):
         # Number of updates per step in environment
         for i in range(args.gradient_steps_per_epoch):
             # Update parameters of all the networks
-            phi_loss = phi.update_parameters(memory, args.batch_size, lamb.lambda_value)
-            lamb_loss = lamb.update_parameters(memory, args.batch_size, phi)
-            critic_1_loss, critic_2_loss, policy_loss, ent_loss, alpha = agent.update_parameters(memory, args.batch_size, updates, phi)
 
-            writer.add_scalar('loss/phi', phi_loss, updates)
-            writer.add_scalar('loss/lambda', lamb_loss, updates)
+            critic_1_loss, critic_2_loss, policy_loss, ent_loss, alpha = agent.update_parameters(memory, args.batch_size, updates, psi, args)
+            loss_total, loss_max, loss_min, loss_const_1, loss_const_2 = psi.update_parameters(memory_traj, args)
+
             writer.add_scalar('loss/critic_1', critic_1_loss, updates)
             writer.add_scalar('loss/critic_2', critic_2_loss, updates)
             writer.add_scalar('loss/policy', policy_loss, updates)
             writer.add_scalar('loss/entropy_loss', ent_loss, updates)
             writer.add_scalar('entropy_temprature/alpha', alpha, updates)
-            writer.add_scalar('dual_variable/lambda', lamb.lambda_value, updates)
+
+            writer.add_scalar('psi_loss/total', loss_total, updates)
+            writer.add_scalar('psi_loss/max', loss_max, updates)
+            writer.add_scalar('psi_loss/min', loss_min, updates)
+            writer.add_scalar('psi_loss/const1', loss_const_1, updates)
+            writer.add_scalar('psi_loss/const2', loss_const_2, updates)
+
             updates += 1
 
     if total_numsteps > args.num_steps:
@@ -194,8 +188,8 @@ for i_epoch in itertools.count(1):
         for i in range(episodes):
             
             state = env.reset()
-            skill = generate_skill_cont(skill_dim)
-            state = np.concatenate([state, skill])
+            radius = generate_skill_disc(radius_dim)
+            state = np.concatenate([state, radius])
 
             episode_steps = 0
             episode_psuedo_reward = 0
@@ -208,9 +202,9 @@ for i_epoch in itertools.count(1):
                 video.record(env.render(mode='rgb_array', camera_id=0))
                 next_state, reward, done, _ = env.step(action)
 
-                next_state = np.concatenate([next_state, skill])
-                psuedo_reward = np.dot(phi.forward_np(next_state) - phi.forward_np(state), skill) 
+                next_state = np.concatenate([next_state, radius])
 
+                psuedo_reward = 0
                 episode_psuedo_reward += psuedo_reward
                 episode_dist_reward += np.linalg.norm(state[:2])
                 episode_steps += 1

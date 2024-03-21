@@ -7,9 +7,9 @@ import imageio
 import numpy as np
 
 
-def generate_skill(dim, eval_idx = -1):
+def generate_skill_disc(dim, eval_idx = -1):
 
-    vector = np.full(dim, -1/(dim-1))
+    vector = np.full(dim, 0)
 
     if eval_idx != -1:
         vector[eval_idx] = 1
