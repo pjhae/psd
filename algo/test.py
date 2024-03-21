@@ -67,7 +67,7 @@ args = parser.parse_args()
 register_custom_envs()
 
 env_name = 'Ant-v3'
-num_epi = 2000
+num_epi = 7000
 
 # Environment
 env = gym.make(env_name)
@@ -93,7 +93,7 @@ episodes = 10
 while True:
     state = env.reset()
     radius = generate_skill_disc(radius_dim)
-    radius = np.array([1,0,0])
+    # radius = np.array([0,1,0])
     state = np.concatenate([state, radius])
     episode_reward = 0
     step = 0
