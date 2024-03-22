@@ -12,6 +12,7 @@ from model_psd import Psi
 
 from utils_sac import VideoRecorder
 from utils_metra import generate_skill_disc, generate_skill_cont
+from utils_psd import plot_graph, get_evalbatch
 
 from envs.register import register_custom_envs
 
@@ -89,7 +90,7 @@ writer = SummaryWriter('runs/{}_SAC_{}_{}_{}'.format(datetime.datetime.now().str
 
 # Memory
 memory = ReplayMemory(args.replay_size, args.seed)
-memory_traj = TrajectoryReplayMemory(args.replay_size, args.seed)
+memory_traj = TrajectoryReplayMemory(64, args.seed)
 
 # Training Loop
 total_numsteps = 0
@@ -155,7 +156,7 @@ for i_epoch in itertools.count(1):
         for i in range(args.gradient_steps_per_epoch):
             # Update parameters of all the networks
 
-            critic_1_loss, critic_2_loss, policy_loss, ent_loss, alpha = agent.update_parameters(memory, args.batch_size, updates, psi, args)
+            critic_1_loss, critic_2_loss, policy_loss, ent_loss, alpha = agent.update_parameters(memory, psi, updates, args)
             loss_total, loss_max, loss_min, loss_const_1, loss_const_2 = psi.update_parameters(memory_traj, args)
 
             writer.add_scalar('loss/critic_1', critic_1_loss, updates)
@@ -222,6 +223,16 @@ for i_epoch in itertools.count(1):
         
         video.save('test_{}.mp4'.format(episode_idx))
         video.init(enabled=False)
+
+        # for evaluation
+        states, _, _, _, _ = memory_traj.sample(8)
+
+        minibatch, minibatch_eval = get_evalbatch(states, 8)
+
+        encoded_data = psi.forward_np(minibatch)
+        encoded_data_eval = psi.forward_np(minibatch_eval)
+
+        plot_graph(encoded_data, encoded_data_eval, args.radius_latent_dim, writer, updates)
 
         writer.add_scalar('avg_psuedo_reward/test', avg_psuedo_reward, episode_idx)
         writer.add_scalar('avg_dist_reward/test', avg_dist_reward, episode_idx)

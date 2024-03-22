@@ -3,6 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal
 from torch.optim import Adam
+
+from utils_psd import onehot2radius
+
 import numpy as np
 import time
 
@@ -74,13 +77,10 @@ class Psi(nn.Module):
         # [batch, feature]
         minibatch_before, minibatch_before_prime, minibatch_after, minibatch_after_prime = get_minibatch(states, args)
 
-        lambda_value = 1
+        lambda_value = 10
         epsilon=1e-5
 
-        radius_onehot_batch = minibatch_before[:,-args.radius_dim:]
-        radius_candidate = np.array([10,50,100])
-
-        radius_batch = np.dot(radius_onehot_batch, radius_candidate)
+        radius_batch = onehot2radius(minibatch_before, args.radius_dim)
 
         L = torch.tensor(radius_batch).to(torch.device("cuda"))
 
@@ -105,43 +105,37 @@ class Psi(nn.Module):
 
 def get_minibatch(data, args):
     num_samples = 8
+    num_samples_per_batch = 20
     batch_size, trajectory_length, feature_dim = data.shape
 
     # randomly choose batch and start idx
     batch_indices = np.random.randint(0, batch_size, size=num_samples)
 
     # convert onehot to radius
-    L_array = get_scalar_from_onehot(data)
+    L_array = onehot2radius(data, args.radius_dim)
 
-    # initialize array
-    minibatch_before = np.zeros((num_samples, feature_dim))
-    minibatch_before_prime = np.zeros((num_samples, feature_dim))
-    minibatch_after = np.zeros((num_samples, feature_dim))
-    minibatch_after_prime = np.zeros((num_samples, feature_dim))
-
-    for i in range(num_samples):
-        batch_index = batch_indices[i]
-        L = L_array[i].astype(int)  # L_data
-        start_index = np.random.randint(0, trajectory_length - L - 1)  # Compute start index
-
-        minibatch_before[i, :] = data[batch_index, start_index, :]
-        minibatch_before_prime[i, :] = data[batch_index, start_index + 1, :]
-        minibatch_after[i, :] = data[batch_index, start_index + L, :]
-        minibatch_after_prime[i, :] = data[batch_index, start_index + L + 1, :]
-
+    # 미니배치 데이터를 저장할 리스트 초기화
+    minibatch_before = []
+    minibatch_before_prime = []
+    minibatch_after = []
+    minibatch_after_prime = []
+    
+    # 각 배치 인덱스마다 여러 개의 시작점을 무작위로 선택하여 데이터 샘플을 추출
+    for batch_index in range(batch_size):
+        L = L_array[batch_index].astype(int)
+        for _ in range(num_samples_per_batch):
+            start_index = np.random.randint(0, max(1, trajectory_length - L - 1))
+            
+            minibatch_before.append(data[batch_index, start_index, :])
+            minibatch_before_prime.append(data[batch_index, start_index + 1, :])
+            minibatch_after.append(data[batch_index, start_index + L, :])
+            minibatch_after_prime.append(data[batch_index, start_index + L + 1, :])
+    
+    # 리스트를 넘파이 배열로 변환
+    minibatch_before = np.array(minibatch_before)
+    minibatch_before_prime = np.array(minibatch_before_prime)
+    minibatch_after = np.array(minibatch_after)
+    minibatch_after_prime = np.array(minibatch_after_prime)
+    
     return minibatch_before, minibatch_before_prime, minibatch_after, minibatch_after_prime
 
-
-
-def get_scalar_from_onehot(data):
-    # 스칼라 값 매핑을 위한 배열
-    scalars = np.array([10,50,100])
-
-    # 데이터에서 배치 사이즈와 각 배치의 마지막 one-hot 벡터를 추출
-    batch_size = data.shape[0]
-    last_onehot_vectors = data[:, -1, -3:]  # 마지막 time step의 마지막 3 feature 차원을 추출
-
-    # 스칼라 값으로 변환
-    scalar_values = np.dot(last_onehot_vectors, scalars)
-
-    return scalar_values

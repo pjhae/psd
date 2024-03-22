@@ -67,7 +67,7 @@ args = parser.parse_args()
 register_custom_envs()
 
 env_name = 'Ant-v3'
-num_epi = 7000
+num_epi = 20000
 
 # Environment
 env = gym.make(env_name)

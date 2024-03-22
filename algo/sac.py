@@ -120,9 +120,9 @@ class SAC(object):
    
         return qf1_loss.item(), qf2_loss.item(), policy_loss.item(), alpha_loss.item(), alpha_tlogs.item()
 
-    def update_parameters(self, memory, batch_size, updates, psi, args):
+    def update_parameters(self, memory, psi, updates, args):
         # Sample a batch from memory
-        state_batch, action_batch, _, next_state_batch, mask_batch = memory.sample(batch_size=batch_size)
+        state_batch, action_batch, _, next_state_batch, mask_batch = memory.sample(batch_size=args.batch_size)
 
         radius_batch = onehot2radius(state_batch, args.radius_dim)
         radius_batch = torch.FloatTensor(radius_batch).to(self.device).unsqueeze(1)
